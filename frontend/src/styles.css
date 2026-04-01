@@ -33,20 +33,262 @@ body {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #dcfce7 0%, #f8fafc 100%);
-  padding: 1rem;
+  background: #f3f4f6;
+  padding: 1.25rem;
 }
 
-.auth-shell {
-  width: min(1100px, 100%);
+.auth-presentation-title {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.auth-presentation-title h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+}
+
+.auth-presentation-title p {
+  margin: 0.35rem 0 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-presentation {
+  width: min(1200px, 100%);
   display: grid;
-  grid-template-columns: minmax(340px, 460px);
+  grid-template-columns: minmax(300px, 340px);
   justify-content: center;
-  gap: 1.25rem;
+  gap: 2rem;
 }
 
-.auth-shell.with-map {
-  grid-template-columns: minmax(340px, 460px) minmax(360px, 520px);
+.auth-presentation.show-map {
+  grid-template-columns: minmax(300px, 340px) minmax(300px, 340px);
+}
+
+.mobile-frame {
+  width: 320px;
+  height: 650px;
+  background: #fff;
+  border-radius: 40px;
+  box-shadow: 0 30px 50px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+  position: relative;
+  border: 8px solid #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 18px 0 18px;
+  z-index: 10;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mobile-status-icons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mobile-battery {
+  width: 12px;
+  height: 9px;
+  border-radius: 3px;
+  background: #111827;
+}
+
+.mobile-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #111827;
+}
+
+.mobile-content {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  padding-top: 24px;
+}
+
+.phone-login-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.75rem;
+}
+
+.phone-logo {
+  width: 82px;
+  height: 82px;
+  border-radius: 26px;
+  background: #84c7a8;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 2.5rem auto;
+  box-shadow: 0 10px 24px rgba(132, 199, 168, 0.35);
+}
+
+.phone-form-stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.phone-form-stack input,
+.phone-form-stack select {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.phone-login-btn {
+  width: 100%;
+  margin-top: 1.4rem;
+  border-radius: 12px;
+  background: #84c7a8;
+  color: #fff;
+  font-weight: 700;
+}
+
+.phone-link-btn {
+  width: 100%;
+  margin-top: 0.6rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.phone-map-screen {
+  height: 100%;
+  position: relative;
+  background: #f2efe9;
+}
+
+.phone-map-search {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.phone-map-search select {
+  border: none;
+  outline: none;
+  padding: 0.15rem;
+  background: transparent;
+}
+
+.phone-map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.phone-map-card {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 68px;
+  z-index: 20;
+  background: #fff;
+  border-radius: 24px;
+  padding: 0.95rem;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+}
+
+.phone-map-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.phone-map-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.phone-map-card p {
+  margin: 0.25rem 0;
+  color: #6b7280;
+  font-size: 0.86rem;
+}
+
+.distance-pill {
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.45rem;
+  height: fit-content;
+}
+
+.phone-directions-btn {
+  margin-top: 0.7rem;
+  width: 100%;
+  border-radius: 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  background: #84c7a8;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.7rem 0.9rem;
+}
+
+.phone-pharmacy-list {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 136px;
+  max-height: 96px;
+  overflow: auto;
+  z-index: 19;
+}
+
+.phone-bottom-nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+  color: #9ca3af;
+  z-index: 30;
+}
+
+.phone-bottom-nav .active {
+  color: #84c7a8;
 }
 
 .auth-card {
@@ -476,8 +718,8 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 @media (max-width: 768px) {
-  .auth-shell,
-  .auth-shell.with-map {
+  .auth-presentation,
+  .auth-presentation.show-map {
     grid-template-columns: 1fr;
   }
 
