@@ -63,12 +63,9 @@ function toDateTimeInput(value) {
   return String(value).replace(" ", "T").slice(0, 16);
 }
 
-function pharmacyMapUrl(pharmacy) {
-  if (!pharmacy) {
-    return "https://maps.google.com/maps?q=Kigali%20pharmacy&t=&z=13&ie=UTF8&iwloc=&output=embed";
-  }
-  const q = encodeURIComponent(`loc:${pharmacy.latitude},${pharmacy.longitude} (${pharmacy.name})`);
-  return `https://maps.google.com/maps?q=${q}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+function pharmacyMapUrl(city) {
+  const q = encodeURIComponent(`${city || "Kigali"} pharmacies`);
+  return `https://maps.google.com/maps?q=${q}&t=k&z=14&ie=UTF8&iwloc=&output=embed`;
 }
 
 function directionsUrl(pharmacy) {
@@ -120,7 +117,6 @@ export default function App() {
 
   const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "", role: "STAFF" });
 
-  const [showWelcomeMap, setShowWelcomeMap] = useState(false);
   const [cities, setCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState("Kigali");
   const [pharmacies, setPharmacies] = useState([]);
@@ -254,17 +250,14 @@ export default function App() {
   if (!user) {
     return (
       <main className="auth-layout">
-        <div className="auth-presentation-title">
-          <h1>MedTrack UI</h1>
-          <p>Login + pharmacy map preview</p>
-        </div>
-
-        <div className={`auth-presentation ${showWelcomeMap ? "show-map" : ""}`}>
+        <div className="auth-presentation show-map">
           <MobileFrame>
             <form className="phone-login-screen" onSubmit={handleAuthSubmit}>
               <div className="phone-logo">
                 <Plus size={44} strokeWidth={3} />
               </div>
+
+              <h1 style={{ textAlign: "center", margin: "0 0 1.25rem 0", color: "#84c7a8" }}>MedTRacker</h1>
 
               <div className="phone-form-stack">
                 {authMode === "register" && (
@@ -310,83 +303,77 @@ export default function App() {
                 {authMode === "login" ? "Need an account? Register" : "Already have an account? Sign in"}
               </button>
 
-              <button type="button" className="phone-link-btn" onClick={() => setShowWelcomeMap((v) => !v)}>
-                <MapPin size={16} /> {showWelcomeMap ? "Hide Pharmacy Map" : "Show Pharmacy Map"}
-              </button>
-
               {message && <div className="ok"><CheckCircle2 size={18} /> {message}</div>}
               {error && <div className="err"><AlertCircle size={18} /> {error}</div>}
             </form>
           </MobileFrame>
 
-          {showWelcomeMap && (
-            <MobileFrame>
-              <div className="phone-map-screen">
-                <div className="phone-map-search">
-                  <Search size={16} />
-                  <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-                    {cities.length ? cities.map((city) => <option key={city}>{city}</option>) : <option>Kigali</option>}
-                  </select>
-                </div>
-
-                <div className="phone-map-canvas">
-                  <iframe
-                    title="pharmacy-map-login"
-                    src={pharmacyMapUrl(selectedPharmacy)}
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                  />
-                </div>
-
-                {selectedPharmacy && (
-                  <div className="phone-map-card">
-                    <div className="phone-map-card-top">
-                      <div>
-                        <h3>{selectedPharmacy.name}</h3>
-                        <p>{selectedPharmacy.address}</p>
-                        <small>{selectedPharmacy.phone || "Phone not available"}</small>
-                      </div>
-                      <span className="distance-pill">Pharmacy</span>
-                    </div>
-
-                    <a
-                      href={directionsUrl(selectedPharmacy)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="phone-directions-btn"
-                    >
-                      Get Directions <Navigation size={16} />
-                    </a>
-                  </div>
-                )}
-
-                {!!pharmacies.length && (
-                  <div className="phone-pharmacy-list">
-                    {pharmacies.map((ph) => (
-                      <button
-                        key={ph.id}
-                        type="button"
-                        className={`pharmacy-chip ${selectedPharmacy?.id === ph.id ? "active" : ""}`}
-                        onClick={() => setSelectedPharmacy(ph)}
-                      >
-                        {ph.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="phone-bottom-nav">
-                  <Home size={20} />
-                  <Pill size={20} />
-                  <MapPin size={20} className="active" />
-                  <UserIcon size={20} />
-                </div>
+          <MobileFrame>
+            <div className="phone-map-screen">
+              <div className="phone-map-search">
+                <Search size={16} />
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
+                  {cities.length ? cities.map((city) => <option key={city}>{city}</option>) : <option>Kigali</option>}
+                </select>
               </div>
-            </MobileFrame>
-          )}
+
+              <div className="phone-map-canvas">
+                <iframe
+                  title="pharmacy-map-login"
+                  src={pharmacyMapUrl(selectedCity)}
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                />
+              </div>
+
+              {selectedPharmacy && (
+                <div className="phone-map-card">
+                  <div className="phone-map-card-top">
+                    <div>
+                      <h3>{selectedPharmacy.name}</h3>
+                      <p>{selectedPharmacy.address}</p>
+                      <small>{selectedPharmacy.phone || "Phone not available"}</small>
+                    </div>
+                    <span className="distance-pill">Pharmacy</span>
+                  </div>
+
+                  <a
+                    href={directionsUrl(selectedPharmacy)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="phone-directions-btn"
+                  >
+                    Get Directions <Navigation size={16} />
+                  </a>
+                </div>
+              )}
+
+              {!!pharmacies.length && (
+                <div className="phone-pharmacy-list">
+                  {pharmacies.map((ph) => (
+                    <button
+                      key={ph.id}
+                      type="button"
+                      className={`pharmacy-chip ${selectedPharmacy?.id === ph.id ? "active" : ""}`}
+                      onClick={() => setSelectedPharmacy(ph)}
+                    >
+                      {ph.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="phone-bottom-nav">
+                <Home size={20} />
+                <Pill size={20} />
+                <MapPin size={20} className="active" />
+                <UserIcon size={20} />
+              </div>
+            </div>
+          </MobileFrame>
         </div>
       </main>
     );
