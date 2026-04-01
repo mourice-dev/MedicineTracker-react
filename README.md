@@ -1,35 +1,45 @@
-<!-- @format -->
+﻿# MedicTrack Hospital Management System
 
-# MedicTrack – Hospital Management System
+This repository now includes a modern stack migration:
 
-Commit for January 28, 2026: Initial project setup.
+- `frontend/`: React (Vite)
+- `backend/`: Node.js + Express + MySQL
 
-Commit for January 29, 2026: Minor update for contribution.
+## New Stack
 
-Commit for January 30, 2026: Marked for contribution.
+- Frontend: React 18 + Vite
+- Backend: Node.js + Express
+- Database: MySQL
 
-**MedicTrack** is a web-based **Hospital Management System** designed to simplify and automate daily hospital operations. The system provides a centralized platform where administrators, doctors, and hospital staff can efficiently manage patients, appointments, medical records, and hospital resources.
+## Project Structure
 
-## Key Features
+- `frontend/` React UI for login, dashboard, patients, appointments, and staff
+- `backend/` REST API for auth, dashboard, patients, appointments, staff, doctors
 
-- **User Authentication & Roles**: Secure login system with access levels for Admin, Doctor, and Staff.
-- **Patient Management**: Register, view, update, and delete patient records.
-- **Appointment Management**: Schedule appointments and assign doctors.
-- **Doctor Management**: Manage doctor profiles and availability.
-- **Medical Records**: Store diagnoses, prescriptions, and treatment notes.
-- **Dashboard**: Overview of hospital activities.
+## Run Backend
 
-## Technology Stack
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run dev
+```
 
-- **Frontend**: JSP, HTML, CSS, Tailwind CSS
-- **Backend**: Java (JSP & Servlets)
-- **Database**: MySQL
-- **Server**: Apache Tomcat
+Initialize DB with:
 
-## Getting Started
+- `backend/sql/schema.sql`
 
-1.  Clone the repository.
-2.  Set up the MySQL database (schema to be provided).
-3.  Configure database credentials in `src/main/java/com/medictrack/util/DBConnection.java`.
-4.  Build the project using Maven: `mvn clean install`.
-5.  Deploy the generated WAR file to Apache Tomcat.
+## Run Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs on `http://localhost:5173` and proxies API requests to `http://localhost:4000`.
+
+## Notes
+
+- Core migrated modules: auth, dashboard, patients, appointments, staff, doctors.
+- Password handling currently mirrors your old project behavior (plain text). For production, use password hashing and JWT/session auth.
