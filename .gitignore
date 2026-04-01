@@ -6,6 +6,9 @@ target/
 node_modules/
 dist/
 build/
+.vite/
+frontend/.vite/
+frontend/dist/
 .next/
 .nuxt/
 .svelte-kit/
