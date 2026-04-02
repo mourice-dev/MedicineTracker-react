@@ -1,580 +1,672 @@
-import { useEffect, useMemo, useState } from "react";
-import { api } from "./api";
+import React, { useState } from 'react';
 import {
-  LayoutDashboard,
+  Activity,
   Users,
   Calendar,
-  UserCheck,
-  LogOut,
-  AlertCircle,
-  CheckCircle2,
-  Edit2,
-  Trash2,
-  MapPin,
-  Navigation,
-  Plus,
+  UserPlus,
   Search,
-  Home,
-  Pill,
-  User as UserIcon,
-} from "lucide-react";
+  Bell,
+  Settings,
+  LogOut,
+  ChevronRight,
+  Stethoscope,
+  FileText,
+  LayoutDashboard,
+  Menu,
+  MoreVertical,
+  Clock,
+  AlertCircle,
+  Lock,
+  Mail,
+  ArrowRight,
+  MapPin,
+  LocateFixed,
+  ExternalLink
+} from 'lucide-react';
 
-const tabs = ["dashboard", "patients", "appointments", "staff"];
+// --- Mock Data ---
 
-const defaultPatient = {
-  id: null,
-  full_name: "",
-  dob: "",
-  gender: "",
-  phone: "",
-  address: "",
-  medical_condition: "",
-  status: "Stable",
-  last_visit: "",
-  assigned_doctor_id: "",
+const MOCK_STATS = [
+  { label: 'Total Patients', value: '1,284', change: '+12%', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
+  { label: 'Appointments Today', value: '42', change: 'On Track', icon: Calendar, color: 'text-teal-600', bg: 'bg-teal-100' },
+  { label: 'Active Staff', value: '38', change: 'Full Staff', icon: Stethoscope, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+  { label: 'Critical Cases', value: '7', change: '-2%', icon: Activity, color: 'text-rose-600', bg: 'bg-rose-100' },
+];
+
+const MOCK_PATIENTS = [
+  { id: 'PT-001', name: 'Sarah Jenkins', age: 34, condition: 'Hypertension', status: 'Stable', lastVisit: '2023-10-24', doctor: 'Dr. Smith' },
+  { id: 'PT-002', name: 'Michael Chen', age: 58, condition: 'Type 2 Diabetes', status: 'Attention', lastVisit: '2023-10-22', doctor: 'Dr. Rao' },
+  { id: 'PT-003', name: 'Emily Davis', age: 22, condition: 'Routine Checkup', status: 'Discharged', lastVisit: '2023-10-25', doctor: 'Dr. Smith' },
+  { id: 'PT-004', name: 'Robert Wilson', age: 45, condition: 'Post-Op Recovery', status: 'Critical', lastVisit: '2023-10-25', doctor: 'Dr. Alverez' },
+  { id: 'PT-005', name: 'Anita Patel', age: 29, condition: 'Migraine', status: 'Stable', lastVisit: '2023-10-20', doctor: 'Dr. Rao' },
+];
+
+const MOCK_APPOINTMENTS = [
+  { id: 1, time: '09:00 AM', patient: 'Sarah Jenkins', type: 'Follow-up', doctor: 'Dr. Smith', status: 'Completed' },
+  { id: 2, time: '10:30 AM', patient: 'James Carter', type: 'Consultation', doctor: 'Dr. Alverez', status: 'In Progress' },
+  { id: 3, time: '01:00 PM', patient: 'Linda May', type: 'Lab Review', doctor: 'Dr. Rao', status: 'Scheduled' },
+  { id: 4, time: '02:15 PM', patient: 'Marcus Reid', type: 'Emergency', doctor: 'Dr. Smith', status: 'Scheduled' },
+];
+
+const MOCK_STAFF = [
+  { id: 1, name: 'Dr. Ayesha Rao', role: 'Cardiologist', department: 'Cardiology', shift: '08:00 - 16:00', status: 'On Duty' },
+  { id: 2, name: 'Dr. John Smith', role: 'General Practitioner', department: 'General Medicine', shift: '09:00 - 17:00', status: 'In Surgery' },
+  { id: 3, name: 'Nurse Clara Wu', role: 'Senior Nurse', department: 'ER', shift: '07:00 - 19:00', status: 'On Duty' },
+  { id: 4, name: 'Dr. Luis Alverez', role: 'Neurologist', department: 'Neurology', shift: '10:00 - 18:00', status: 'On Break' },
+];
+
+const BRAND_LOGO_SRC = '/branding/medt.png';
+
+const buildPharmacyLinks = (location) => {
+  const searchUrl = location
+    ? `https://www.google.com/maps/search/pharmacy/@${location.latitude},${location.longitude},15z`
+    : 'https://www.google.com/maps/search/pharmacy+near+me';
+
+  const embedUrl = location
+    ? `https://www.google.com/maps?q=pharmacy&ll=${location.latitude},${location.longitude}&z=15&output=embed`
+    : 'https://www.google.com/maps?q=pharmacy&z=14&output=embed';
+
+  return { searchUrl, embedUrl };
 };
 
-const defaultAppointment = {
-  id: null,
-  patient_id: "",
-  doctor_id: "",
-  appointment_time: "",
-  type: "Consultation",
-  status: "Scheduled",
-  notes: "",
-};
+const LocationPharmacyPanel = ({ location, locationStatus, locationError, onRequestLocation, variant = 'split' }) => {
+  const hasLocation = Boolean(location);
+  const { searchUrl, embedUrl } = buildPharmacyLinks(location);
+  const wrapperClassName = variant === 'stacked'
+    ? 'bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden'
+    : 'bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden';
+  const gridClassName = variant === 'stacked'
+    ? 'grid grid-cols-1'
+    : 'grid lg:grid-cols-[1.05fr_0.95fr]';
+  const mapMinHeight = variant === 'stacked' ? 'min-h-[300px]' : 'min-h-[320px]';
 
-const defaultStaff = {
-  user_id: "",
-  department: "",
-  specialty: "",
-  shift_start: "",
-  shift_end: "",
-  status: "Active",
-};
-
-function toDateInput(value) {
-  if (!value) return "";
-  return String(value).slice(0, 10);
-}
-
-function toDateTimeInput(value) {
-  if (!value) return "";
-  return String(value).replace(" ", "T").slice(0, 16);
-}
-
-function pharmacyMapUrl(city) {
-  const q = encodeURIComponent(`${city || "Kigali"} pharmacies`);
-  return `https://maps.google.com/maps?q=${q}&t=k&z=14&ie=UTF8&iwloc=&output=embed`;
-}
-
-function directionsUrl(pharmacy) {
-  if (!pharmacy) return "#";
-  return `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`;
-}
-
-function MobileFrame({ children }) {
   return (
-    <div className="mobile-frame">
-      <div className="mobile-status">
-        <span>9:41</span>
-        <div className="mobile-status-icons">
-          <div className="mobile-battery" />
-          <div className="mobile-dot" />
+    <div className={wrapperClassName}>
+      <div className={gridClassName}>
+        <div className="p-6 lg:p-8 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold mb-4">
+            <LocateFixed size={14} className="mr-1" />
+            Pharmacy help near you
+          </div>
+          <h3 className="text-2xl font-bold text-slate-900 mb-3">Find the nearest pharmacy in seconds</h3>
+          <p className="text-slate-600 max-w-xl mb-6">
+            Share your location and MedicTrack will open Google Maps around your position so the closest pharmacy is easy to reach.
+          </p>
+
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onRequestLocation}
+              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-teal-600 text-white font-bold shadow-lg shadow-teal-600/20 hover:bg-teal-700 transition"
+            >
+              <MapPin size={18} className="mr-2" />
+              {hasLocation ? 'Update my location' : 'Allow location access'}
+            </button>
+
+            <a
+              href={searchUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:border-teal-300 hover:text-teal-700 transition"
+            >
+              <ExternalLink size={18} className="mr-2" />
+              Open in Google Maps
+            </a>
+          </div>
+
+          <div className="mt-5 inline-flex items-center rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+            <span className="mr-2 h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            {locationStatus === 'granted' ? 'Location shared and ready' : locationStatus === 'loading' ? 'Waiting for your location permission' : 'Request location to personalize nearby results'}
+          </div>
+
+          {locationError && (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {locationError}
+            </div>
+          )}
+
+          {hasLocation && (
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Location captured. Google Maps is centered around your current position.
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-900 p-3 lg:p-4">
+          <div className={`rounded-xl overflow-hidden border border-white/10 bg-slate-950 shadow-2xl h-full ${mapMinHeight}`}>
+            <iframe
+              title="Nearby pharmacies on Google Maps"
+              src={embedUrl}
+              className={`w-full h-full ${mapMinHeight}`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+          <div className="mt-3 text-xs text-slate-300 flex items-center justify-between gap-3">
+            <span>{hasLocation ? `Centered near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}` : 'Showing a pharmacy search preview until location is shared'}</span>
+          </div>
         </div>
       </div>
-      <div className="mobile-content">{children}</div>
     </div>
   );
-}
+};
 
-export default function App() {
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem("medictrack_user");
-    return raw ? JSON.parse(raw) : null;
-  });
+// --- Components ---
 
-  const [authMode, setAuthMode] = useState("login");
-  const [tab, setTab] = useState("dashboard");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center w-full px-6 py-3 text-sm font-medium transition-colors duration-200 
+      ${active ? 'text-teal-600 bg-teal-50 border-r-4 border-teal-600' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+  >
+    <Icon size={20} className="mr-3" />
+    {label}
+  </button>
+);
 
-  const [dashboard, setDashboard] = useState(null);
-  const [doctors, setDoctors] = useState([]);
-  const [allPatients, setAllPatients] = useState([]);
-
-  const [patients, setPatients] = useState([]);
-  const [patientFilter, setPatientFilter] = useState({ keyword: "", dateFrom: "", dateTo: "", status: "" });
-  const [patientForm, setPatientForm] = useState(defaultPatient);
-
-  const [appointments, setAppointments] = useState([]);
-  const [appointmentFilter, setAppointmentFilter] = useState({ keyword: "", searchDate: "", timeFrom: "", timeTo: "", status: "", type: "" });
-  const [appointmentForm, setAppointmentForm] = useState(defaultAppointment);
-
-  const [staff, setStaff] = useState([]);
-  const [staffFilter, setStaffFilter] = useState({ keyword: "", role: "", department: "", status: "" });
-  const [staffForm, setStaffForm] = useState(defaultStaff);
-
-  const [authForm, setAuthForm] = useState({ fullName: "", email: "", password: "", role: "STAFF" });
-
-  const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("Kigali");
-  const [pharmacies, setPharmacies] = useState([]);
-  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
-
-  const patientQuery = useMemo(() => new URLSearchParams(patientFilter).toString(), [patientFilter]);
-  const appointmentQuery = useMemo(() => new URLSearchParams(appointmentFilter).toString(), [appointmentFilter]);
-  const staffQuery = useMemo(() => new URLSearchParams(staffFilter).toString(), [staffFilter]);
-
-  useEffect(() => {
-    api.doctors().then(setDoctors).catch(() => {});
-    api.patients().then(setAllPatients).catch(() => {});
-
-    api.medicineCities().then((items) => {
-      setCities(items);
-      if (items.length) {
-        const city = items.includes("Kigali") ? "Kigali" : items[0];
-        setSelectedCity(city);
-      }
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!selectedCity) return;
-    api.medicinePharmacies(selectedCity).then((rows) => {
-      setPharmacies(rows);
-      setSelectedPharmacy(rows[0] || null);
-    }).catch(() => {});
-  }, [selectedCity]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const loaders = {
-      dashboard: () => api.dashboard().then(setDashboard),
-      patients: () => api.patients(patientQuery).then(setPatients),
-      appointments: () => api.appointments(appointmentQuery).then(setAppointments),
-      staff: () => api.staff(staffQuery).then(setStaff),
-    };
-
-    loaders[tab]().catch((e) => setError(e.message));
-  }, [user, tab, patientQuery, appointmentQuery, staffQuery]);
-
-  async function handleAuthSubmit(event) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-    try {
-      if (authMode === "login") {
-        const data = await api.login({ email: authForm.email, password: authForm.password });
-        setUser(data.user);
-        localStorage.setItem("medictrack_user", JSON.stringify(data.user));
-        setMessage("Welcome back");
-      } else {
-        await api.register({
-          fullName: authForm.fullName,
-          email: authForm.email,
-          password: authForm.password,
-          role: authForm.role,
-        });
-        setMessage("Registration successful. You can now log in.");
-        setAuthMode("login");
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
-  function logout() {
-    setUser(null);
-    localStorage.removeItem("medictrack_user");
-  }
-
-  async function savePatient(event) {
-    event.preventDefault();
-    try {
-      if (patientForm.id) {
-        await api.updatePatient(patientForm.id, patientForm);
-      } else {
-        await api.addPatient(patientForm);
-      }
-      setPatientForm(defaultPatient);
-      setPatients(await api.patients(patientQuery));
-      setAllPatients(await api.patients());
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
-  async function deletePatient(id) {
-    await api.deletePatient(id);
-    setPatients(await api.patients(patientQuery));
-    setAllPatients(await api.patients());
-  }
-
-  async function saveAppointment(event) {
-    event.preventDefault();
-    try {
-      const payload = {
-        ...appointmentForm,
-        appointment_time: appointmentForm.appointment_time.replace("T", " ") + ":00",
-      };
-      if (appointmentForm.id) {
-        await api.updateAppointment(appointmentForm.id, payload);
-      } else {
-        await api.addAppointment(payload);
-      }
-      setAppointmentForm(defaultAppointment);
-      setAppointments(await api.appointments(appointmentQuery));
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
-  async function deleteAppointment(id) {
-    await api.deleteAppointment(id);
-    setAppointments(await api.appointments(appointmentQuery));
-  }
-
-  async function saveStaff(event) {
-    event.preventDefault();
-    try {
-      await api.updateStaff(staffForm.user_id, staffForm);
-      setStaffForm(defaultStaff);
-      setStaff(await api.staff(staffQuery));
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
-  if (!user) {
-    return (
-      <main className="auth-layout">
-        <div className="auth-presentation show-map">
-          <MobileFrame>
-            <form className="phone-login-screen" onSubmit={handleAuthSubmit}>
-              <div className="phone-logo">
-                <Plus size={44} strokeWidth={3} />
-              </div>
-
-              <h1 style={{ textAlign: "center", margin: "0 0 1.25rem 0", color: "#84c7a8" }}>MedTRacker</h1>
-
-              <div className="phone-form-stack">
-                {authMode === "register" && (
-                  <input
-                    placeholder="Full Name"
-                    value={authForm.fullName}
-                    onChange={(e) => setAuthForm((p) => ({ ...p, fullName: e.target.value }))}
-                    required
-                  />
-                )}
-
-                <input
-                  placeholder="Email"
-                  type="email"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm((p) => ({ ...p, email: e.target.value }))}
-                  required
-                />
-
-                <input
-                  placeholder="Password"
-                  type="password"
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm((p) => ({ ...p, password: e.target.value }))}
-                  required
-                />
-
-                {authMode === "register" && (
-                  <select value={authForm.role} onChange={(e) => setAuthForm((p) => ({ ...p, role: e.target.value }))}>
-                    <option>STAFF</option>
-                    <option>NURSE</option>
-                    <option>DOCTOR</option>
-                    <option>ADMIN</option>
-                  </select>
-                )}
-              </div>
-
-              <button type="submit" className="phone-login-btn">
-                {authMode === "login" ? "Log In" : "Create Account"}
-              </button>
-
-              <button type="button" className="phone-link-btn" onClick={() => setAuthMode((m) => (m === "login" ? "register" : "login"))}>
-                {authMode === "login" ? "Need an account? Register" : "Already have an account? Sign in"}
-              </button>
-
-              {message && <div className="ok"><CheckCircle2 size={18} /> {message}</div>}
-              {error && <div className="err"><AlertCircle size={18} /> {error}</div>}
-            </form>
-          </MobileFrame>
-
-          <MobileFrame>
-            <div className="phone-map-screen">
-              <div className="phone-map-search">
-                <Search size={16} />
-                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-                  {cities.length ? cities.map((city) => <option key={city}>{city}</option>) : <option>Kigali</option>}
-                </select>
-              </div>
-
-              <div className="phone-map-canvas">
-                <iframe
-                  title="pharmacy-map-login"
-                  src={pharmacyMapUrl(selectedCity)}
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                />
-              </div>
-
-              {selectedPharmacy && (
-                <div className="phone-map-card">
-                  <div className="phone-map-card-top">
-                    <div>
-                      <h3>{selectedPharmacy.name}</h3>
-                      <p>{selectedPharmacy.address}</p>
-                      <small>{selectedPharmacy.phone || "Phone not available"}</small>
-                    </div>
-                    <span className="distance-pill">Pharmacy</span>
-                  </div>
-
-                  <a
-                    href={directionsUrl(selectedPharmacy)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="phone-directions-btn"
-                  >
-                    Get Directions <Navigation size={16} />
-                  </a>
-                </div>
-              )}
-
-              {!!pharmacies.length && (
-                <div className="phone-pharmacy-list">
-                  {pharmacies.map((ph) => (
-                    <button
-                      key={ph.id}
-                      type="button"
-                      className={`pharmacy-chip ${selectedPharmacy?.id === ph.id ? "active" : ""}`}
-                      onClick={() => setSelectedPharmacy(ph)}
-                    >
-                      {ph.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="phone-bottom-nav">
-                <Home size={20} />
-                <Pill size={20} />
-                <MapPin size={20} className="active" />
-                <UserIcon size={20} />
-              </div>
-            </div>
-          </MobileFrame>
-        </div>
-      </main>
-    );
-  }
-
-  const navIcon = {
-    dashboard: LayoutDashboard,
-    patients: Users,
-    appointments: Calendar,
-    staff: UserCheck,
+const Badge = ({ status }) => {
+  const styles = {
+    Stable: 'bg-green-100 text-green-700',
+    Discharged: 'bg-gray-100 text-gray-700',
+    Attention: 'bg-amber-100 text-amber-700',
+    Critical: 'bg-rose-100 text-rose-700',
+    'On Duty': 'bg-green-100 text-green-700',
+    'In Surgery': 'bg-purple-100 text-purple-700',
+    'On Break': 'bg-orange-100 text-orange-700',
+    Completed: 'bg-green-100 text-green-700',
+    'In Progress': 'bg-blue-100 text-blue-700',
+    Scheduled: 'bg-slate-100 text-slate-700',
   };
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar">
-        <div className="sidebar-header"><h1>MedicTrack</h1></div>
-        <nav className="sidebar-nav">
-          {tabs.map((item) => {
-            const Icon = navIcon[item];
-            return (
-              <button key={item} className={`nav-item ${tab === item ? "active" : ""}`} onClick={() => setTab(item)}>
-                <Icon size={18} /><span style={{ textTransform: "capitalize" }}>{item}</span>
-              </button>
-            );
-          })}
-        </nav>
-        <div className="user-profile">
-          <div className="user-info">
-            <span className="user-name">{user.full_name}</span>
-            <span className="user-role">{user.role}</span>
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+      {status}
+    </span>
+  );
+};
+
+// --- Views ---
+
+const LoginView = ({ onLogin, onRequestLocation, location, locationStatus, locationError }) => (
+  <div className="min-h-screen flex bg-slate-50">
+    {/* Left Side - Brand & Info */}
+    <div className="hidden lg:flex lg:w-1/2 bg-teal-600 text-white flex-col justify-between p-12 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500 rounded-bl-full opacity-50"></div>
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-700 rounded-tr-full opacity-50"></div>
+
+      <div className="relative z-10 max-w-xl">
+        <div className="mb-8">
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="MedicTrack logo"
+            className="h-24 w-auto object-contain"
+          />
+        </div>
+        <h1 className="text-4xl font-bold leading-tight mb-4">
+          Streamline Your Healthcare Operations
+        </h1>
+        <p className="text-teal-100 text-lg max-w-md">
+          Manage patients, staff, and appointments with our comprehensive healthcare management system designed for modern facilities.
+        </p>
+      </div>
+
+      <div className="relative z-10 max-w-xl space-y-4">
+        <div>
+          <p className="text-teal-100 text-sm font-semibold tracking-wide uppercase">Emergency Assist</p>
+          <h3 className="text-2xl font-bold mt-1">Find a nearby pharmacy quickly</h3>
+        </div>
+
+        <LocationPharmacyPanel
+          variant="stacked"
+          location={location}
+          locationStatus={locationStatus}
+          locationError={locationError}
+          onRequestLocation={onRequestLocation}
+        />
+
+        <p className="text-sm text-teal-200">© 2024 MedicTrack Systems Inc.</p>
+      </div>
+    </div>
+
+    {/* Right Side - Login Form */}
+    <div className="w-full lg:w-1/2 flex flex-col justify-center items-stretch p-6 sm:p-8 lg:p-12">
+      <div className="w-full max-w-md mx-auto space-y-6 lg:space-y-8">
+        <div className="lg:hidden flex items-center justify-center mb-8">
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="MedicTrack logo"
+            className="h-20 w-auto object-contain"
+          />
+        </div>
+
+        <div className="text-center lg:text-left">
+          <h2 className="text-3xl font-bold text-slate-900">Welcome back</h2>
+          <p className="mt-2 text-slate-500">Please enter your details to sign in.</p>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); onLogin(); }} className="mt-8 space-y-6">
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="email"
+                  defaultValue="admin@medictrack.com"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-slate-50 focus:bg-white transition-all outline-none"
+                  placeholder="Enter your email"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="password"
+                  defaultValue="password123"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-slate-50 focus:bg-white transition-all outline-none"
+                  placeholder="Enter your password"
+                />
+              </div>
+            </div>
           </div>
-          <button className="logout-btn" onClick={logout}><LogOut size={18} /></button>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input type="checkbox" className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded" />
+              <label className="ml-2 block text-sm text-slate-600">Remember me</label>
+            </div>
+            <div className="text-sm">
+              <a href="#" className="font-medium text-teal-600 hover:text-teal-500">Forgot password?</a>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 shadow-lg shadow-teal-600/30 transition-all active:scale-[0.98]"
+          >
+            Sign in
+            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-slate-500">
+          Don't have an account? <a href="#" className="font-bold text-teal-600 hover:text-teal-500">Contact Administration</a>
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const DashboardView = ({ location, locationStatus, locationError, onRequestLocation }) => (
+  <div className="space-y-6">
+    {/* Welcome Header */}
+    <div className="bg-gradient-to-r from-teal-800 to-teal-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full transform translate-x-1/2 -translate-y-1/2"></div>
+      <div className="relative z-10">
+        <h2 className="text-3xl font-bold mb-2">Welcome Back, Dr. Admin</h2>
+        <p className="text-teal-100 mb-6 max-w-xl">You have 4 appointments scheduled for today and 7 critical patient cases requiring attention.</p>
+        <div className="flex space-x-3">
+          <button className="bg-white text-teal-800 px-4 py-2 rounded-lg text-sm font-bold hover:bg-teal-50 transition">View Schedule</button>
+          <button className="bg-teal-700 text-white border border-teal-500 px-4 py-2 rounded-lg text-sm font-bold hover:bg-teal-600 transition">Review Cases</button>
+        </div>
+      </div>
+    </div>
+
+    <LocationPharmacyPanel
+      variant="split"
+      location={location}
+      locationStatus={locationStatus}
+      locationError={locationError}
+      onRequestLocation={onRequestLocation}
+    />
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {MOCK_STATS.map((stat, idx) => (
+        <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 transition hover:shadow-md hover:-translate-y-1 duration-300">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+              <h3 className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</h3>
+            </div>
+            <div className={`p-2 rounded-lg ${stat.bg}`}>
+              <stat.icon size={20} className={stat.color} />
+            </div>
+          </div>
+          <p className="text-xs font-medium text-slate-400 mt-4">
+            <span className={stat.change.includes('+') ? 'text-green-600' : stat.change.includes('-') ? 'text-rose-600' : 'text-slate-600'}>
+              {stat.change}
+            </span> vs last month
+          </p>
+        </div>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Recent Activity / Chart Placeholder */}
+      <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-slate-800">Patient Admittance Analytics</h3>
+          <select className="text-sm border-slate-200 rounded-md text-slate-500 bg-slate-50 p-1">
+            <option>Last 7 Days</option>
+            <option>Last Month</option>
+          </select>
+        </div>
+        <div className="h-64 bg-slate-50 rounded-lg flex items-center justify-center border border-dashed border-slate-300 relative overflow-hidden group">
+          <div className="text-center z-10">
+            <Activity className="mx-auto text-slate-300 mb-2" size={48} />
+            <p className="text-slate-400 text-sm">Real-time Visualization</p>
+          </div>
+          <svg className="absolute bottom-0 left-0 right-0 h-32 w-full text-teal-100 opacity-50" viewBox="0 0 100 40" preserveAspectRatio="none">
+            <path d="M0 40 L0 30 Q10 10 20 25 T40 15 T60 30 T80 10 T100 20 L100 40 Z" fill="currentColor" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Upcoming Schedule */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Upcoming Schedule</h3>
+        <div className="space-y-4">
+          {MOCK_APPOINTMENTS.slice(0, 3).map((appt) => (
+            <div key={appt.id} className="flex items-start pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+              <div className="bg-teal-50 text-teal-700 p-2 rounded-lg mr-3 text-center min-w-[60px]">
+                <span className="block text-xs font-bold">{appt.time}</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-800 text-sm">{appt.patient}</h4>
+                <p className="text-xs text-slate-500">{appt.type} with {appt.doctor}</p>
+              </div>
+            </div>
+          ))}
+          <button className="w-full mt-2 py-2 text-sm text-teal-600 font-medium hover:bg-teal-50 rounded-lg transition border border-transparent hover:border-teal-100">
+            View All Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const PatientsView = () => (
+  <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full">
+    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h2 className="text-lg font-bold text-slate-800">Patient Records</h2>
+      <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition shadow-lg shadow-teal-600/20">
+        <UserPlus size={16} className="mr-2" />
+        Add Patient
+      </button>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+          <tr>
+            <th className="px-6 py-4">ID</th>
+            <th className="px-6 py-4">Patient Name</th>
+            <th className="px-6 py-4">Age</th>
+            <th className="px-6 py-4">Condition</th>
+            <th className="px-6 py-4">Assigned Dr.</th>
+            <th className="px-6 py-4">Last Visit</th>
+            <th className="px-6 py-4">Status</th>
+            <th className="px-6 py-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {MOCK_PATIENTS.map((pt) => (
+            <tr key={pt.id} className="hover:bg-slate-50 transition">
+              <td className="px-6 py-4 text-sm font-medium text-slate-900">{pt.id}</td>
+              <td className="px-6 py-4">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs mr-3">
+                    {pt.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <span className="text-sm text-slate-800 font-medium">{pt.name}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-sm text-slate-600">{pt.age}</td>
+              <td className="px-6 py-4 text-sm text-slate-600">{pt.condition}</td>
+              <td className="px-6 py-4 text-sm text-slate-600">{pt.doctor}</td>
+              <td className="px-6 py-4 text-sm text-slate-600">{pt.lastVisit}</td>
+              <td className="px-6 py-4"><Badge status={pt.status} /></td>
+              <td className="px-6 py-4">
+                <button className="text-slate-400 hover:text-teal-600 transition">
+                  <MoreVertical size={16} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+const AppointmentsView = () => (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <h2 className="text-2xl font-bold text-slate-800">Appointment Management</h2>
+      <div className="flex space-x-2">
+        <button className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50">Today</button>
+        <button className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 shadow-lg shadow-teal-600/20">+ New Appointment</button>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {MOCK_APPOINTMENTS.map((apt) => (
+        <div key={apt.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col hover:border-teal-200 transition duration-200">
+          <div className="flex justify-between items-start mb-4">
+            <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-sm font-bold flex items-center">
+              <Clock size={14} className="mr-1" /> {apt.time}
+            </div>
+            <Badge status={apt.status} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">{apt.patient}</h3>
+          <p className="text-slate-500 text-sm mb-4">{apt.type}</p>
+          <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex items-center text-sm text-slate-600">
+              <Stethoscope size={16} className="mr-2 text-teal-600" />
+              {apt.doctor}
+            </div>
+            <button className="text-teal-600 hover:text-teal-800 text-sm font-medium hover:underline">Details</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const StaffView = () => (
+  <div className="bg-white rounded-xl shadow-sm border border-slate-100">
+    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h2 className="text-lg font-bold text-slate-800">Medical Staff Directory</h2>
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+        <input
+          type="text"
+          placeholder="Search staff..."
+          className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 w-64 bg-slate-50 focus:bg-white transition"
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+      {MOCK_STAFF.map(staff => (
+        <div key={staff.id} className="border border-slate-200 rounded-xl p-4 flex items-start space-x-4 hover:shadow-md transition bg-gradient-to-br from-white to-slate-50/50">
+          <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+            {staff.name.split(' ')[1][0]}
+          </div>
+          <div className="flex-1">
+            <h4 className="font-bold text-slate-800">{staff.name}</h4>
+            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">{staff.role}</p>
+            <p className="text-sm text-slate-600 mb-2">{staff.department}</p>
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">{staff.shift}</span>
+              <Badge status={staff.status} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// --- Main App ---
+
+export default function MedicTrackApp() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [location, setLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('idle');
+  const [locationError, setLocationError] = useState('');
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Your browser does not support location sharing. Open Google Maps and search for pharmacies manually.');
+      return;
+    }
+
+    setLocationStatus('loading');
+    setLocationError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLocationStatus('granted');
+      },
+      (error) => {
+        setLocationStatus('error');
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location access was denied. You can still open the Google Maps pharmacy search link.'
+            : 'We could not get your location right now. Try again or open the Google Maps pharmacy search link.'
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DashboardView location={location} locationStatus={locationStatus} locationError={locationError} onRequestLocation={requestLocation} />;
+      case 'patients': return <PatientsView />;
+      case 'staff': return <StaffView />;
+      case 'appointments': return <AppointmentsView />;
+      default: return <DashboardView />;
+    }
+  };
+
+  if (!isLoggedIn) {
+    return <LoginView onLogin={() => setIsLoggedIn(true)} onRequestLocation={requestLocation} location={location} locationStatus={locationStatus} locationError={locationError} />;
+  }
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="h-16 flex items-center px-6 border-b border-slate-100">
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="MedicTrack logo"
+            className="h-14 w-auto object-contain"
+          />
+        </div>
+
+        <div className="py-6 flex flex-col justify-between h-[calc(100%-4rem)]">
+          <nav className="space-y-1">
+            <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setSidebarOpen(false); }} />
+            <SidebarItem icon={Users} label="Patients" active={activeTab === 'patients'} onClick={() => { setActiveTab('patients'); setSidebarOpen(false); }} />
+            <SidebarItem icon={Calendar} label="Appointments" active={activeTab === 'appointments'} onClick={() => { setActiveTab('appointments'); setSidebarOpen(false); }} />
+            <SidebarItem icon={Stethoscope} label="Staff" active={activeTab === 'staff'} onClick={() => { setActiveTab('staff'); setSidebarOpen(false); }} />
+            <SidebarItem icon={FileText} label="Reports" active={activeTab === 'reports'} onClick={() => { setActiveTab('reports'); setSidebarOpen(false); }} />
+          </nav>
+
+          <div className="px-6">
+            <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4 mb-6 border border-teal-100">
+              <h4 className="text-teal-900 font-bold text-sm mb-1">Upgrade Plan</h4>
+              <p className="text-teal-700 text-xs mb-3 opacity-80">Get access to AI Analytics.</p>
+              <button className="w-full bg-teal-600 hover:bg-teal-700 text-white text-xs py-2 rounded-lg transition shadow-sm">Upgrade Now</button>
+            </div>
+            <button
+              onClick={() => setIsLoggedIn(false)}
+              className="flex items-center w-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-rose-600 transition-colors"
+            >
+              <LogOut size={18} className="mr-3" />
+              Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
-      <main className="main-content">
-        <div className="page-header">
-          <h2 className="page-title" style={{ textTransform: "capitalize" }}>{tab}</h2>
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shadow-sm z-10">
+          <button
+            className="md:hidden text-slate-500 hover:text-slate-700"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
 
-        {error && <div className="err"><AlertCircle size={18} /> {error}</div>}
-        {message && <div className="ok"><CheckCircle2 size={18} /> {message}</div>}
+          <div className="hidden md:flex relative w-96">
+            <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search patients, doctors, or records..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition"
+            />
+          </div>
 
-        {tab === "dashboard" && dashboard && (
-          <section className="grid4">
-            <div className="card stat-card"><span className="stat-label">Total Patients</span><strong className="stat-value">{dashboard.totalPatients}</strong></div>
-            <div className="card stat-card"><span className="stat-label">Today Appointments</span><strong className="stat-value">{dashboard.todayAppointments}</strong></div>
-            <div className="card stat-card"><span className="stat-label">Active Staff</span><strong className="stat-value">{dashboard.activeStaff}</strong></div>
-            <div className="card stat-card"><span className="stat-label">Critical Cases</span><strong className="stat-value">{dashboard.criticalCases}</strong></div>
-          </section>
-        )}
-
-        {tab === "patients" && (
-          <section>
-            <div className="toolbar">
-              <input placeholder="Search patient" value={patientFilter.keyword} onChange={(e) => setPatientFilter((p) => ({ ...p, keyword: e.target.value }))} />
-              <input type="date" value={patientFilter.dateFrom} onChange={(e) => setPatientFilter((p) => ({ ...p, dateFrom: e.target.value }))} />
-              <input type="date" value={patientFilter.dateTo} onChange={(e) => setPatientFilter((p) => ({ ...p, dateTo: e.target.value }))} />
-              <select value={patientFilter.status} onChange={(e) => setPatientFilter((p) => ({ ...p, status: e.target.value }))}>
-                <option value="">All status</option><option>Stable</option><option>Critical</option><option>Attention</option><option>Discharged</option>
-              </select>
-            </div>
-
-            <form className="card" onSubmit={savePatient}>
-              <h3 className="card-title">Patient Form</h3>
-              <div className="grid2">
-                <input placeholder="Full Name" value={patientForm.full_name} onChange={(e) => setPatientForm((p) => ({ ...p, full_name: e.target.value }))} required />
-                <input type="date" value={patientForm.dob} onChange={(e) => setPatientForm((p) => ({ ...p, dob: e.target.value }))} />
-                <select value={patientForm.gender} onChange={(e) => setPatientForm((p) => ({ ...p, gender: e.target.value }))}><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
-                <input placeholder="Phone" value={patientForm.phone} onChange={(e) => setPatientForm((p) => ({ ...p, phone: e.target.value }))} />
-                <input placeholder="Medical condition" value={patientForm.medical_condition} onChange={(e) => setPatientForm((p) => ({ ...p, medical_condition: e.target.value }))} />
-                <select value={patientForm.status} onChange={(e) => setPatientForm((p) => ({ ...p, status: e.target.value }))}><option>Stable</option><option>Critical</option><option>Attention</option><option>Discharged</option></select>
-                <input type="date" value={patientForm.last_visit} onChange={(e) => setPatientForm((p) => ({ ...p, last_visit: e.target.value }))} />
-                <select value={patientForm.assigned_doctor_id} onChange={(e) => setPatientForm((p) => ({ ...p, assigned_doctor_id: e.target.value }))}>
-                  <option value="">Assign doctor</option>
-                  {doctors.map((d) => <option key={d.id} value={d.id}>{d.full_name}</option>)}
-                </select>
+          <div className="flex items-center space-x-4">
+            <button className="relative p-2 text-slate-400 hover:bg-slate-50 rounded-full transition">
+              <Bell size={20} />
+              <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-white"></span>
+            </button>
+            <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition">
+              <Settings size={20} />
+            </button>
+            <div className="flex items-center pl-2 border-l border-slate-200">
+              <div className="h-8 w-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-sm mr-2 shadow-sm ring-2 ring-teal-100">
+                DA
               </div>
-              <textarea placeholder="Address" value={patientForm.address} onChange={(e) => setPatientForm((p) => ({ ...p, address: e.target.value }))} style={{ marginTop: "0.75rem" }} />
-              <div className="row" style={{ marginTop: "0.75rem" }}>
-                <button type="submit">Save</button>
-                <button type="button" className="ghost" onClick={() => setPatientForm(defaultPatient)}>Reset</button>
+              <div className="hidden lg:block">
+                <p className="text-sm font-bold text-slate-800">Dr. Admin</p>
+                <p className="text-xs text-slate-500">Administrator</p>
               </div>
-            </form>
-
-            <div className="table-container">
-              <table>
-                <thead><tr><th>Name</th><th>Condition</th><th>Status</th><th>Doctor</th><th>Action</th></tr></thead>
-                <tbody>
-                  {patients.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.full_name}</td>
-                      <td>{p.medical_condition || "-"}</td>
-                      <td>{p.status}</td>
-                      <td>{p.doctor_name || "Unassigned"}</td>
-                      <td>
-                        <button className="icon-btn" onClick={() => setPatientForm({ ...p, dob: toDateInput(p.dob), last_visit: toDateInput(p.last_visit) })}><Edit2 size={16} /></button>
-                        <button className="icon-btn danger" onClick={() => deletePatient(p.id)}><Trash2 size={16} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          </section>
-        )}
+          </div>
+        </header>
 
-        {tab === "appointments" && (
-          <section>
-            <div className="toolbar">
-              <input placeholder="Search" value={appointmentFilter.keyword} onChange={(e) => setAppointmentFilter((p) => ({ ...p, keyword: e.target.value }))} />
-              <input type="date" value={appointmentFilter.searchDate} onChange={(e) => setAppointmentFilter((p) => ({ ...p, searchDate: e.target.value }))} />
-              <input type="time" value={appointmentFilter.timeFrom} onChange={(e) => setAppointmentFilter((p) => ({ ...p, timeFrom: e.target.value }))} />
-              <input type="time" value={appointmentFilter.timeTo} onChange={(e) => setAppointmentFilter((p) => ({ ...p, timeTo: e.target.value }))} />
-            </div>
+        {/* Scrollable Content Area */}
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
 
-            <form className="card" onSubmit={saveAppointment}>
-              <h3 className="card-title">Appointment Form</h3>
-              <div className="grid2">
-                <select value={appointmentForm.patient_id} onChange={(e) => setAppointmentForm((p) => ({ ...p, patient_id: e.target.value }))} required>
-                  <option value="">Select patient</option>
-                  {allPatients.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-                </select>
-                <select value={appointmentForm.doctor_id} onChange={(e) => setAppointmentForm((p) => ({ ...p, doctor_id: e.target.value }))} required>
-                  <option value="">Select doctor</option>
-                  {doctors.map((d) => <option key={d.id} value={d.id}>{d.full_name}</option>)}
-                </select>
-                <input type="datetime-local" value={appointmentForm.appointment_time} onChange={(e) => setAppointmentForm((p) => ({ ...p, appointment_time: e.target.value }))} required />
-                <input placeholder="Type" value={appointmentForm.type} onChange={(e) => setAppointmentForm((p) => ({ ...p, type: e.target.value }))} />
-                <input placeholder="Status" value={appointmentForm.status} onChange={(e) => setAppointmentForm((p) => ({ ...p, status: e.target.value }))} />
-              </div>
-              <textarea placeholder="Notes" value={appointmentForm.notes} onChange={(e) => setAppointmentForm((p) => ({ ...p, notes: e.target.value }))} style={{ marginTop: "0.75rem" }} />
-              <div className="row" style={{ marginTop: "0.75rem" }}>
-                <button type="submit">Save</button>
-                <button type="button" className="ghost" onClick={() => setAppointmentForm(defaultAppointment)}>Reset</button>
-              </div>
-            </form>
-
-            <div className="table-container">
-              <table>
-                <thead><tr><th>Patient</th><th>Doctor</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                  {appointments.map((a) => (
-                    <tr key={a.id}>
-                      <td>{a.patient_name}</td>
-                      <td>{a.doctor_name}</td>
-                      <td>{toDateTimeInput(a.appointment_time).replace("T", " ")}</td>
-                      <td>{a.status}</td>
-                      <td>
-                        <button className="icon-btn" onClick={() => setAppointmentForm({ ...a, appointment_time: toDateTimeInput(a.appointment_time) })}><Edit2 size={16} /></button>
-                        <button className="icon-btn danger" onClick={() => deleteAppointment(a.id)}><Trash2 size={16} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-
-        {tab === "staff" && (
-          <section>
-            <div className="toolbar">
-              <input placeholder="Search staff" value={staffFilter.keyword} onChange={(e) => setStaffFilter((p) => ({ ...p, keyword: e.target.value }))} />
-              <input placeholder="Role" value={staffFilter.role} onChange={(e) => setStaffFilter((p) => ({ ...p, role: e.target.value }))} />
-              <input placeholder="Department" value={staffFilter.department} onChange={(e) => setStaffFilter((p) => ({ ...p, department: e.target.value }))} />
-              <input placeholder="Status" value={staffFilter.status} onChange={(e) => setStaffFilter((p) => ({ ...p, status: e.target.value }))} />
-            </div>
-
-            <form className="card" onSubmit={saveStaff}>
-              <h3 className="card-title">Staff Assignment</h3>
-              <div className="grid2">
-                <select value={staffForm.user_id} onChange={(e) => setStaffForm((p) => ({ ...p, user_id: e.target.value }))} required>
-                  <option value="">Select staff</option>
-                  {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.full_name} ({s.role})</option>)}
-                </select>
-                <input placeholder="Department" value={staffForm.department} onChange={(e) => setStaffForm((p) => ({ ...p, department: e.target.value }))} />
-                <input placeholder="Specialty" value={staffForm.specialty} onChange={(e) => setStaffForm((p) => ({ ...p, specialty: e.target.value }))} />
-                <input type="time" value={staffForm.shift_start} onChange={(e) => setStaffForm((p) => ({ ...p, shift_start: e.target.value }))} />
-                <input type="time" value={staffForm.shift_end} onChange={(e) => setStaffForm((p) => ({ ...p, shift_end: e.target.value }))} />
-                <input placeholder="Status" value={staffForm.status} onChange={(e) => setStaffForm((p) => ({ ...p, status: e.target.value }))} />
-              </div>
-              <div style={{ marginTop: "0.75rem" }}><button type="submit">Save</button></div>
-            </form>
-
-            <div className="table-container">
-              <table>
-                <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                  {staff.map((s) => (
-                    <tr key={s.user_id}>
-                      <td>{s.full_name}</td><td>{s.role}</td><td>{s.department || "-"}</td><td>{s.status}</td>
-                      <td><button className="icon-btn" onClick={() => setStaffForm({ ...s })}><Edit2 size={16} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-      </main>
     </div>
   );
 }
