@@ -4,18 +4,28 @@ import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 
-import authRoutes from "./routes/auth.js";
-import patientRoutes from "./routes/patients.js";
-import appointmentRoutes from "./routes/appointments.js";
-import staffRoutes from "./routes/staff.js";
-import dashboardRoutes from "./routes/dashboard.js";
-import doctorRoutes from "./routes/doctors.js";
-import medicineRoutes from "./routes/medicine.js";
+import * as authRoutesModule from "./routes/auth.js";
+import * as patientRoutesModule from "./routes/patients.js";
+import * as appointmentRoutesModule from "./routes/appointments.js";
+import * as staffRoutesModule from "./routes/staff.js";
+import * as dashboardRoutesModule from "./routes/dashboard.js";
+import * as doctorRoutesModule from "./routes/doctors.js";
+import * as medicineRoutesModule from "./routes/medicine.js";
 
 dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
+
+const unwrapRouter = (moduleValue) => moduleValue?.default ?? moduleValue;
+
+const authRoutes = unwrapRouter(authRoutesModule);
+const patientRoutes = unwrapRouter(patientRoutesModule);
+const appointmentRoutes = unwrapRouter(appointmentRoutesModule);
+const staffRoutes = unwrapRouter(staffRoutesModule);
+const dashboardRoutes = unwrapRouter(dashboardRoutesModule);
+const doctorRoutes = unwrapRouter(doctorRoutesModule);
+const medicineRoutes = unwrapRouter(medicineRoutesModule);
 
 app.use(cors());
 app.use(express.json());
