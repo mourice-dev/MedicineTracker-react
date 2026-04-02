@@ -1,28 +1,28 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import { query } from "../config/db.js";
 
 const router = Router();
 
 router.get("/", async (req, res, next) => {
   try {
-    const [{ totalPatients }] = await query(`SELECT COUNT(*) AS totalPatients FROM patients`);
+    const [{ totalpatients }] = await query(`SELECT COUNT(*)::int AS totalpatients FROM patients`);
 
-    const [{ todayAppointments }] = await query(
-      `SELECT COUNT(*) AS todayAppointments
+    const [{ todayappointments }] = await query(
+      `SELECT COUNT(*)::int AS todayappointments
        FROM appointments
-       WHERE DATE(appointment_time) = CURDATE()`
+       WHERE appointment_time::date = CURRENT_DATE`
     );
 
-    const [{ activeStaff }] = await query(
-      `SELECT COUNT(*) AS activeStaff
+    const [{ activestaff }] = await query(
+      `SELECT COUNT(*)::int AS activestaff
        FROM users u
        LEFT JOIN staff_details sd ON u.id = sd.user_id
        WHERE u.role IN ('DOCTOR', 'NURSE', 'STAFF')
          AND COALESCE(sd.status, 'Off Duty') IN ('Active', 'On Duty')`
     );
 
-    const [{ criticalCases }] = await query(
-      `SELECT COUNT(*) AS criticalCases
+    const [{ criticalcases }] = await query(
+      `SELECT COUNT(*)::int AS criticalcases
        FROM appointments
        WHERE status = 'In Progress' OR type = 'Emergency'`
     );
@@ -33,16 +33,16 @@ router.get("/", async (req, res, next) => {
        FROM appointments a
        LEFT JOIN patients p ON a.patient_id = p.id
        LEFT JOIN users u ON a.doctor_id = u.id
-       WHERE DATE(a.appointment_time) = CURDATE()
+       WHERE a.appointment_time::date = CURRENT_DATE
        ORDER BY a.appointment_time ASC`
     );
 
     return res.json({
-      totalPatients,
-      todayAppointments,
-      activeStaff,
-      criticalCases,
-      upcomingAppointments,
+      totalPatients: totalpatients || 0,
+      todayAppointments: todayappointments || 0,
+      activeStaff: activestaff || 0,
+      criticalCases: criticalcases || 0,
+      upcomingAppointments: upcomingAppointments || [],
     });
   } catch (err) {
     return next(err);

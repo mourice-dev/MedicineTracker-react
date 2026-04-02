@@ -1,3 +1,5 @@
+/** @format */
+
 import express from "express";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -44,8 +46,41 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/medicine", medicineRoutes);
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ message: "Server error", detail: err.message });
+  console.error("Express Error Handler:", {
+    message: err.message,
+    code: err.code,
+    stack: err.stack?.split("\n")[0],
+  });
+
+  // Database connection errors
+  if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND") {
+    return res.status(503).json({
+      message: "Database connection failed. Please try again.",
+      detail: "Service temporarily unavailable",
+    });
+  }
+
+  // Timeout errors
+  if (err.message?.includes("timeout")) {
+    return res.status(504).json({
+      message: "Request timeout. Please try again.",
+      detail: err.message,
+    });
+  }
+
+  // Query errors
+  if (err.message?.includes("syntax") || err.message?.includes("column")) {
+    return res.status(400).json({
+      message: "Invalid request data",
+      detail: err.message,
+    });
+  }
+
+  // Default 500 error
+  res.status(500).json({
+    message: "Server error",
+    detail: err.message,
+  });
 });
 
 export default app;
