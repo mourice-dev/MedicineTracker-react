@@ -1,4 +1,5 @@
-﻿import express from "express";
+import express from "express";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
@@ -37,6 +38,10 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: "Server error", detail: err.message });
 });
 
-app.listen(port, () => {
-  console.log(`MedicTrack API listening on http://localhost:${port}`);
-});
+export default app;
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(port, () => {
+    console.log(`MedicTrack API listening on http://localhost:${port}`);
+  });
+}
